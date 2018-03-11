@@ -15,4 +15,5 @@ maya:
 {name: wver, path: <path3>}
 {name: vv, path: <path2>}
 
-After creating or deleting any directory, I'm updating my yaml file
+
+After creating or deleting any directory,  I'm updating my yaml file.

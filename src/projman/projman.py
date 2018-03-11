@@ -3,26 +3,36 @@
 import os
 import yaml
 import shutil
+import exception
 class Projman():
-             
-#    houdini:
+# Structure for project_list.yaml.
+# We will be using this file to store the path of all the projects created in type: project name and project oath format.
+# This way it will be easy to retireve project path suring delete operation.
+# houdini:
 # - {name: hj, path: <path1>}
 # - {name: bc, path: <path3>}
 # - {name: ege, path: <path2>}
-#    maya:
-#   - {name: ibwv, path: <path1>}
-#   - {name: wver, path: <path3>}
-#   - {name: vv, path: <path2>}
+# maya:
+#  - {name: ibwv, path: <path1>}
+#  - {name: wver, path: <path3>}
+#  - {name: vv, path: <path2>}
 
+
+#Reading tempates from PROJMAN_TEMPLATES and storing them in self.templates
+#format:  {'maya': {'value': [{'value': 'chan'}, {...}], 'permission': '0771'}, 'houdin': {...}}
     def __init__(self):
         self.templates = {}
-        template_paths = os.getenv('PROJMAN_TEMPLATES')
-        for template_path in template_paths.split(':'):
-            templates = yaml.load(open(template_path))
-            for template in templates:
-                name = template['value'].keys()[0]
-                permission = template['permission']
-                self.templates[name] = {'value': template['value'][name], 'permission': permission}
+        try:
+            template_paths = os.getenv('PROJMAN_TEMPLATES')
+            for template_path in template_paths.split(':'):
+                templates = yaml.load(open(template_path))
+                for template in templates:
+                    name = template['value'].keys()[0]
+                    permission = template['permission']
+                    self.templates[name] = {'value': template['value'][name], 'permission': permission}
+        except Exception as e:
+            print("template error occured")
+            raise exception.TemplateError
 
         self.default_path = os.getenv('PROJMAN_LOCATION', os.path.expanduser('~/projman/projects'))
         self.project_list_path = os.path.expanduser('~/project_list.yaml')
@@ -51,9 +61,10 @@ class Projman():
         project_names = []
         if  not types:
             types = project_list.keys()
-            projects = project_list[types]
-            for p in projects:
-                project_names.append(p['name'])
+            for typ in types:
+                projects = project_list[typ]
+                for p in projects:
+                    project_names.append(p['name'])
         else:
             if types in project_list:
                 projects = project_list[types]
@@ -64,24 +75,26 @@ class Projman():
         print('\n'.join(project_names))
 
 
-    def delete(self, name=None, ptype=None):
+    def delete(self, name, ptype=None):
         project_type = ptype
         project_list = yaml.load(open(self.project_list_path))
-        print(project_list)
-        if name:
+        # delete project with given name and type
+        if project_type:
+            for project in project_list[project_type]:
+                if project['name'] == name:
+                    delete_path = project['path']
+                    print("removing " + delete_path)
+                    shutil.rmtree(delete_path, ignore_errors=True)
+                    project_list[project_type].remove(project)
+        # delete project with given name only
+        else:          
             for project_type in project_list:
                 for project in project_list[project_type]:
                     if project['name'] == name:
                         delete_path = project['path']
                         print("removing " + delete_path)
-                        shutil.rmtree(delete_path)
+                        shutil.rmtree(delete_path, ignore_errors=True)
                         project_list[project_type].remove(project)
-
-        elif project_type:
-            for project in project_list[project_type]:
-                delete_path = project['path']
-                shutil.rmtree(delete_path, ignore_errors=True)
-            del project_list[project_type]
 
         yaml.dump(project_list, open(self.project_list_path, "w"))
 
@@ -122,16 +135,24 @@ class Projman():
                     pass
                 os.chmod(directory, int(permission, 8))
             else:
-                print("creating: " + str(directory))
                 if not os.path.exists(directory):
                     os.makedirs(directory, int(permission, 8))
         except OSError:
             print ('Error: Creating directory ot file. ' + directory)
 
-
     
-    def prettyPrint(self, path):
-        for path, dirs, files in os.walk(path):
-            print path
-            for f in files:
-                print f
+    def describe(self, type):
+        directories = self.templates[type]['value']
+        for directory in directories:
+            self.pretty_print(directory, 0)
+
+    def pretty_print(self, directory, level):
+        if isinstance(directory['value'], str):
+            line = "|" + "   |"*level + "---" + directory['value']
+            print(line)
+        elif isinstance(directory['value'], dict):
+            p_dir = directory['value'].keys()[0]
+            line = "|" + "   |"*level + "---"  + p_dir
+            print(line)
+            for directory in directory['value'][p_dir]:
+                self.pretty_print(directory, level+1)
