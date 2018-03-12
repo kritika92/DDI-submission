@@ -10,7 +10,7 @@ from projman.exception import *
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-t', '--type', dest='type', help='The type of the project created from a specific template')
-    parser.add_argument('-p', '--path', dest='path', help='The base path in which to create the project. If not supplied, it uses a default project path', type=int)
+    parser.add_argument('-p', '--path', dest='path', help='The base path in which to create the project. If not supplied, it uses a default project path')
     subparsers = parser.add_subparsers(help='SUBCMD')
     
     # A list command
@@ -20,7 +20,7 @@ def main():
     
     create_parser = subparsers.add_parser('create', help='Create a new project in PROJECT_PATH')
     create_parser.add_argument('-t', '--type', required=True, dest='type', help='The type of the project created from a specific template')
-    create_parser.add_argument('-p', '--path', dest='path', help='The base path in which to create the project. If not supplied, it uses a default project path', type=int)
+    create_parser.add_argument('-p', '--path', dest='path', help='The base path in which to create the project. If not supplied, it uses a default project path')
     create_parser.add_argument('name', help='New project to create')
     create_parser.set_defaults(which='create')
 
@@ -35,12 +35,14 @@ def main():
     describe_parser = subparsers.add_parser('describe', help='Pretty print the structure of a project template')
     describe_parser.add_argument('-t', '--type', required=True, dest='type', help='The type of the project created from a specific template')
     describe_parser.set_defaults(which='describe')
-
-    args = parser.parse_args()
+    try:
+        args = parser.parse_args()
+    except SystemExit:
+        raise Exception("Invalid args")
 
     if args.which == 'types':
         projman = Projman()
-        print projman.types()
+        projman.types()
     elif args.which == 'list':
         projman = Projman()
         projman.list(args.type)
@@ -56,12 +58,7 @@ def main():
 
 if __name__ == '__main__':
     try:
-        sys.exit(main())
-    except TemplateError as e:
-        sys.stderr.write("Error: %s\n" % str(e))
-        traceback.print_exc(file=sys.stderr)
-        sys.exit(2)
+        main()
     except Exception as e:
         sys.stderr.write("Error: %s\n" % str(e))
-        traceback.print_exc(file=sys.stderr)
         sys.exit(4)
