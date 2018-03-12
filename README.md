@@ -1,19 +1,99 @@
-First of all I started with reading yaml file. It consisted of various dcitionary, nested dictionary, lists. I had to create directories, subdirectories ot of them. So used recursion for creating directories , subdirectories.
+# pm
+Command Line to create project structure based on templates.
 
-template_paths: lit of colon seperated paths of projamn templates
-self.templates: a dictioanry having details of particular type of file with their respective permission
+### Prerequisites
+  Set PROJMAN_TEMPLATES env variable with colon seperated folder location of templates.
+  
+  Optionally set PROJMAN_LOCATION env variable to set the location of folder.
 
-self.project_list_path: path of the yaml file created
-I'm creating yaml file to store all the type of directories created with their name and path
-for eg.     
-houdini:
-{name: hj, path: <path1>}
-{name: bc, path: <path3>}
-{name: ege, path: <path2>}
-maya:
-{name: ibwv, path: <path1>}
-{name: wver, path: <path3>}
-{name: vv, path: <path2>}
+### Installing
 
+```
+git clone <this project>
+cd DDI-submission
+make
+```
 
-After creating or deleting any directory,  I'm updating my yaml file.
+### Usage
+
+```
+
+usage: pm.py [-h] [-t TYPE] [-p PATH] {list,create,delete,types,describe} ...
+
+positional arguments:
+  {list,create,delete,types,describe}
+                        SUBCMD
+    list                List the projects which have been created, optionally
+                        restricting the list to a specific type or types
+    create              Create a new project in PROJECT_PATH
+    delete              Delete an existing project. Optionally, restrict the
+                        deletion to a particular type within the project tree
+    types               List the types of projects which may be created
+    describe            Pretty print the structure of a project template
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -t TYPE, --type TYPE  The type of the project created from a specific
+                        template
+  -p PATH, --path PATH  The base path in which to create the project. If not
+                        supplied, it uses a default project path
+
+```
+                        
+### Example
+
+**Create**
+```
+pm create abc -t maya
+pm create abcd -t houdini -p /abc/xyz
+pm create abc -t houdini -p /abc/xyz
+```
+
+```
+pm delete abc -t maya       # will delete only maya project with name abc
+pm delete abc               # will delete all available projects with name abc
+```
+
+**Other Commands**
+```
+pm list -t maya
+pm types
+pm describe
+```
+
+### Templates: 
+Can be configured by PROJMAN_TEMPLATES env variable. 
+```Supported format: YAML```
+#### Example:
+```
+- permission: "0751"
+  value:
+    maya:
+      - value: chan
+      - value: data
+      - permission: "0771"
+        value: images
+      - value:
+          renderData:
+          - value: depth
+          - value: iprImages
+          - value:
+              vray:
+                - value: finalgMap
+                - value: lightMap
+                - value: photonMap
+                - value: shadowMap
+          - value: shaders
+      - permission: "0771"
+        value:
+          scenes:
+            - value: default.mb
+      - value: scripts
+      - value: sound
+      - value:
+          startup:
+          - value: jobSetup.mel
+      - value: textures
+      - permission: "0771"
+        value: workspace.mel
+```

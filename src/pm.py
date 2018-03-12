@@ -37,8 +37,10 @@ def main():
     describe_parser.set_defaults(which='describe')
     try:
         args = parser.parse_args()
-    except SystemExit:
-        raise Exception("Invalid args")
+    except SystemExit as e:
+        if e.code != 0:
+            raise Exception("Invalid args")
+        sys.exit(0)
 
     if args.which == 'types':
         projman = Projman()
