@@ -172,6 +172,7 @@ class Projman():
         project_permission = self.templates[project_type]['permission']
         for directory in project_template:
             self.__create_directory(directory, project_permission, path)
+        os.chmod(path, int(project_permission, 8))
 
     def __create_directory(self, directory, permission, parent_path):
         if isinstance(directory['value'], str):
