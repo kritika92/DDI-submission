@@ -3,7 +3,8 @@ import yaml
 import shutil
 import exception
 import glob
-
+import traceback
+import sys
 class Projman():
 
     """
@@ -28,7 +29,9 @@ class Projman():
         self.templates = {}
         try:
             template_paths = os.getenv('PROJMAN_TEMPLATES')
-            for template_path in template_paths.split(':'):
+            template_paths_list = template_paths.split(':')
+            template_paths_list.reverse()
+            for template_path in template_paths_list:
                 for filename in glob.glob(os.path.join(template_path, '*.yaml')):
                     templates = yaml.load(open(filename))
                     for template in templates:
@@ -36,17 +39,19 @@ class Projman():
                         permission = template['permission']
                         self.templates[name] = {'value': template['value'][name], 'permission': permission}
         except Exception as e:
+            traceback.print_exc(file=sys.stderr)
             raise exception.TemplateError("Template error: " + e.message)
 
         self.default_path = os.getenv('PROJMAN_LOCATION', os.path.expanduser('~/projman/projects'))
-        self.project_list_path = os.path.expanduser('~/project_list.yaml')
+        proj_path = os.path.dirname(os.path.realpath(__file__))
+        self.project_list_path = proj_path + '/.project_list.yaml'
         if not os.path.exists(self.project_list_path):
             yaml.dump({}, open(self.project_list_path, "w"))
     
     """
     Create a project at <path> location with a particular type and name
     <name>: mandatory:  name of the project
-    <project_type>: mandatory:  type of the project to be created. Eg: maya|houdini . Note: templates will be loaded from 
+    <project_type>: Optional:   type/types of the project to be created. Eg: maya|houdini . Note: templates will be loaded from 
                                 PROJMAN_TEMPLATES env variable.
     <project_path>: Optional:   Can override the default value presented by PROJMAN_LOCATION env variable or '~/projman/projects'
     
@@ -54,28 +59,34 @@ class Projman():
                             If the folder is already present.
     """
 
-    def create(self, name, project_type, project_path=None):
+    def create(self, name, project_type=None, project_path=None):
         # Raise an exception id type is not valid
-        if not self.__is_valid_type(project_type):
+        if project_type and not self.__is_valid_type(project_type):
             raise Exception(str("Type %s is not available" % project_type))
 
+        if not project_type:
+            project_types = self.templates.keys()
+        else:
+            project_types = [project_type]
         if not project_path:
             project_path = self.default_path
-        folder_path = project_path + '/' + name
 
-        #Raise an exception if already a project with the same name exists.
-        if os.path.exists(folder_path):
-            raise Exception(str("%s already exists" % folder_path))
-        self.__create_project(project_type, folder_path)
+        
+        for project_type in project_types:
+            folder_path = project_path + '/' + name + '/' + project_type
+            #Raise an exception if already a project with the same name exists.
+            if os.path.exists(folder_path):
+                raise Exception(str("%s already exists" % folder_path))
+            self.__create_project(project_type, folder_path)
 
-        # Update the information of type, name and path in project list.
-        project_list = yaml.load(open(self.project_list_path))
-        if project_type in project_list:
-            project_list[project_type].append({'name' : name , 'path': folder_path})
-        else:
-            project_list[project_type] = []
-            project_list[project_type].append({'name' : name , 'path': folder_path})
-        yaml.dump(project_list, open(self.project_list_path, "w"))
+            # Update the information of type, name and path in project list.
+            project_list = yaml.load(open(self.project_list_path))
+            if project_type in project_list:
+                project_list[project_type].append({'name' : name , 'path': folder_path})
+            else:
+                project_list[project_type] = []
+                project_list[project_type].append({'name' : name , 'path': folder_path})
+            yaml.dump(project_list, open(self.project_list_path, "w"))
 
     """
     List the projects which have been created, optionally restricting the list to a specific type or types.
@@ -85,19 +96,19 @@ class Projman():
     """
     def list(self, types=None):
         project_list = yaml.load(open(self.project_list_path))
-        project_names = []
+        project_names = set()
         if  not types:
             types = project_list.keys()
             for typ in types:
                 projects = project_list[typ]
                 for p in projects:
-                    project_names.append(p['name'])
+                    project_names.add(p['name'])
         else:
             for typ in types.split(','):
                 if typ in project_list:
                     projects = project_list[typ]
                     for p in projects:
-                        project_names.append(p['name'])
+                        project_names.add(p['name'])
         
         print('\n'.join(project_names))
 
@@ -138,18 +149,23 @@ class Projman():
     
     """
     Pretty print the structure of a project template.
-    <type> : Mandatory
+    <types> : Optional: Comma separated value of types
 
     Raises Exception if the type is not valid.
     """
-    def describe(self, type):
-        if type not in self.templates:
-            raise Exception(str("Template: %s not available" % type))
-        directories = self.templates[type]['value']
-        for directory in directories:
-            self.__pretty_print(directory, 0)
-
-    
+    def describe(self, types=None):
+        if types:
+            ptypes = types.split(',')
+        else:
+            ptypes = self.templates.keys()
+        for typ in ptypes:
+            if typ not in self.templates:
+                raise Exception(str("Template: %s not available" % typ))
+            directories = self.templates[typ]['value']
+            print(typ)
+            for directory in directories:
+                self.__pretty_print(directory, 0)
+            print("")
 
     def __create_project(self, project_type, path):
         project_template = self.templates[project_type]['value']
@@ -160,14 +176,12 @@ class Projman():
     def __create_directory(self, directory, permission, parent_path):
         if isinstance(directory['value'], str):
             if 'permission' in directory:
-                print("creating %s with %s", directory['value'], directory['permission'])
                 self.__createFolderorFile(parent_path, directory['value'], directory['permission'])
             else:
                 self.__createFolderorFile(parent_path, directory['value'], permission)
         elif isinstance(directory['value'], dict):
             if 'permission' in directory:
                 permission = directory['permission']
-                print("creating %s with %s", directory['value'].keys()[0], directory['permission'])
 
             parent_dir_name = directory['value'].keys()[0]
             self.__createFolderorFile(parent_path, parent_dir_name, permission)
