@@ -57,10 +57,19 @@ pm delete abc               # will delete all available projects with name abc
 
 **Other Commands**
 ```
-pm  -t maya list
 pm list
-pm types
+pm  -t maya list
+pm  -t maya,houdini list
+```
+
+```
 pm describe
+pm -t maya describe
+pm -t maya,houdini describe
+```
+
+```
+pm types
 ```
 
 ### Templates: 
