@@ -44,19 +44,21 @@ optional arguments:
 
 **Create**
 ```
-pm create abc -t maya
-pm create abcd -t houdini -p /abc/xyz
-pm create abc -t houdini -p /abc/xyz
+pm create xyz
+pm -t maya create abc 
+pm -t houdini -p /abc/xyz create abcd 
+pm -t houdini -p /abc/xyz create abc 
 ```
 
 ```
-pm delete abc -t maya       # will delete only maya project with name abc
+pm -t maya delete abc       # will delete only maya project with name abc
 pm delete abc               # will delete all available projects with name abc
 ```
 
 **Other Commands**
 ```
-pm list -t maya
+pm  -t maya list
+pm list
 pm types
 pm describe
 ```
